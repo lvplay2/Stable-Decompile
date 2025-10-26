@@ -3,7 +3,7 @@
 
 A Project focused in making modding both GOTY and OG possible, adding features and contents from different platforms of the Franchise, and bug fixes.
 
-Lets be honest, Plants Vs. Zombies has a lot of bugs and the decompile version have more of them. Old SexyAppFrameWork and Rendering Issues especially Software Rendering.
+Lets be honest, Plants vs. Zombies has a lot of bugs and the decompile version have more of them. Old SexyAppFrameWork and Rendering Issues especially Software Rendering.
 I addressed most of these and fixed them on SexyAppFramework while adding QoL features like being able to Resize your window, Maximize Button, and fixing Computers not being allowed to use D3D capabilities.
 
 # DISCLAIMER
@@ -14,15 +14,15 @@ This project does not include any IP from PopCap outside of their open source ga
 
 If you want to play this game using this project
 
-If you compile in GOTY, then you need the original game files by purchasing Plants Vs. Zombies: Game of the Year Edition on [Steam](https://store.steampowered.com/app/3590/Plants_vs_Zombies_GOTY_Edition/)!
+If you compile in GOTY, then you need the original game files by purchasing Plants vs. Zombies: Game of the Year Edition on [Steam](https://store.steampowered.com/app/3590/Plants_vs_Zombies_GOTY_Edition/)!
 
-If you compile in 2009, then you need the original game files by owning Plants Vs. Zombies!
+If you compile in 2009, then you need the original game files by owning Plants vs. Zombies!
 
 # Modding Guide
 
 ## Setting Up The Assets
 
-With your legally owned copy of Plants Vs. Zombies GOTY / 2009, Go to the game's director. Copy Properties/ folder and the main.pak into the Output/ folder of this mod.
+With your legally owned copy of Plants vs. Zombies GOTY / 2009, Go to the game's director. Copy Properties/ folder and the main.pak into the Output/ folder of this mod.
 Compile debugGOTY or releaseGOTY if your copy is the GOTY version of the game, otherwise compile in debug or release for the 2009.
 The Output folder contents should look like this:
   - bass.dll
@@ -143,26 +143,26 @@ with
 ## Stable Decompile Team
 
 ### Programmers
-  InLiothixie
+- InLiothixie
 
 ### Bug Hunter
-  Exter
-  Unnamed
+- Exter
+- Unnamed
 
 ### Artists
-  Andreko
-  ReatExists
-  Nostalgic2137
-  Fruko
+- Andreko
+- ReatExists
+- Nostalgic2137
+- Fruko
 
 ### Animators
-  Unnamed 
+- Unnamed 
 
 ### Music Composers
-  Drenco 
+- Drenco 
 
 ### Special Thanks
-  YourLocalMoon 
-  Electr0Gunner 
-  Exter 
-  Adnini 
+- YourLocalMoon 
+- Electr0Gunner 
+- Exter 
+- Adnini 
