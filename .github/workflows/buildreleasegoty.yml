@@ -23,6 +23,6 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@main
       with:
-        name: StableDecompile-GOTY-Build
+        name: StableDecompile-releaseGOTY-Build
         path: |
           Output/
