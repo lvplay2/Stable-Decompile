@@ -1,0 +1,28 @@
+name: Build (Debug)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Build
+      run: msbuild PlantsVsZombies.sln /p:Configuration=Debug
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@main
+      with:
+        name: StableDecompile-Debug-Build
+        path: |
+          Output/
