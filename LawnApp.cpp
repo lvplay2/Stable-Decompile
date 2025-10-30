@@ -68,8 +68,6 @@ bool gFastMo = false;  //0x6A9EAB
 LawnApp* gLawnApp = nullptr;  //0x6A9EC0
 int gSlowMoCounter = 0;  //0x6A9EC4
 
-Rect LawnApp::gBoardBounds(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-
 //0x44E8A0
 bool LawnGetCloseRequest()
 {
@@ -170,6 +168,7 @@ LawnApp::LawnApp()
 	memset(&mFlowersPlucked, false, sizeof(mFlowersPlucked));
 	mRIPMode = false;
 	memset(&mDirtyBushes, 0, sizeof(mDirtyBushes));
+	mPlayerLevelRef = -1;
 }
 
 //0x44EDD0、0x44EDF0
@@ -484,11 +483,14 @@ void LawnApp::PreNewGame(GameMode theGameMode, bool theLookForSavedGame, int the
 	if (theLookForSavedGame && TryLoadGame(theLevel))
 		return;
 
-	SexyString aFileName = GetSavedGameName(mGameMode, mPlayerInfo->mId);
+	SexyString aFileName = GetSavedGameName(mGameMode, mPlayerInfo->mId, theLevel);
 	EraseFile(aFileName);
 	int thePlayerLevel = mPlayerInfo->mLevel;
+	bool isReplaying = mPlayerLevelRef > theLevel;
+	mPlayerLevelRef = thePlayerLevel;
 	mPlayerInfo->mLevel = theLevel;
 	NewGame();
+	mBoard->mIsReplay = isReplaying;
 	mPlayerInfo->mLevel = thePlayerLevel;
 }
 
@@ -536,7 +538,7 @@ bool LawnApp::TryLoadGame()
 
 bool LawnApp::TryLoadGame(int theLevel)
 {
-	SexyString aSaveName = GetSavedGameName(mGameMode, mPlayerInfo->mId);
+	SexyString aSaveName = GetSavedGameName(mGameMode, mPlayerInfo->mId, theLevel);
 	mMusic->StopAllMusic();
 
 	if (this->FileExists(aSaveName))
@@ -904,6 +906,7 @@ void LawnApp::FinishUserDialog(bool isYes)
 					mGameSelector->SyncProfile(true);
 				}
 			}
+			mPlayerLevelRef = mPlayerInfo->GetLevel();
 		}
 
 		KillDialog(Dialogs::DIALOG_USERDIALOG);
@@ -1053,6 +1056,7 @@ void LawnApp::FinishConfirmDeleteUserDialog(bool isYes)
 		{
 			mPlayerInfo = mProfileMgr->GetAnyProfile();
 		}
+		mPlayerLevelRef = mPlayerInfo->GetLevel();
 	}
 
 	mProfileMgr->Save();
@@ -1118,6 +1122,7 @@ void LawnApp::FinishRenameUserDialog(bool isYes)
 	{
 		mPlayerInfo = mProfileMgr->GetProfile(aNewName);
 	}
+	mPlayerLevelRef = mPlayerInfo->GetLevel();
 
 	aUserDialog->FinishRenameUser(aNewName);
 	mWidgetManager->MarkAllDirty();
@@ -1141,12 +1146,18 @@ void LawnApp::FinishNameError(int theId)
 void LawnApp::FinishRestartConfirmDialog()
 {
 	mSawYeti = mBoard->mKilledYeti;
+	int theLevel = -1;
 
 	KillDialog(Dialogs::DIALOG_CONTINUE);
 	KillDialog(Dialogs::DIALOG_RESTARTCONFIRM);
+	if (mBoard && mGameMode == GameMode::GAMEMODE_ADVENTURE)
+		theLevel = mBoard->mLevel;
 	KillBoard();
 
-	PreNewGame(mGameMode, false);
+	if (theLevel > 0)
+		PreNewGame(mGameMode, false, theLevel);
+	else
+		PreNewGame(mGameMode, false);
 }
 
 void LawnApp::DoCheatDialog()
@@ -1392,6 +1403,8 @@ void LawnApp::Init()
 	{
 		aCurUser = StringToSexyString(theUser);
 		mPlayerInfo = mProfileMgr->GetProfile(aCurUser);
+		if (mPlayerInfo)
+			mPlayerLevelRef = mPlayerInfo->GetLevel();
 	}
 	if (mPlayerInfo == nullptr)
 	{
@@ -1550,7 +1563,8 @@ bool LawnApp::UpdatePlayerProfileForFinishingLevel()
 		}
 		else
 		{
-			mPlayerInfo->SetLevel(mBoard->mLevel + 1);  // 存档进入下一关
+			if (!mBoard->mIsReplay)
+				mPlayerInfo->SetLevel(mBoard->mLevel + 1);  // 存档进入下一关
 		}
 
 		if (!HasFinishedAdventure() && abs(mBoard->mLevel) == 34)
@@ -1664,32 +1678,39 @@ void LawnApp::CheckForGameEnd()
 	if (IsAdventureMode())
 	{
 		int aLevel = mBoard->mLevel;
+		bool isReplaying = mBoard->mIsReplay;
 		KillBoard();
 
-		if (IsFirstTimeAdventureMode() && aLevel < 50)
+		if (!isReplaying)
 		{
-			ShowAwardScreen(AwardType::AWARD_FORLEVEL, true);
-		}
-		else if (aLevel == FINAL_LEVEL && mPlayerInfo->mFinishedAdventure == 1)
-		{
-			if (mPlayerInfo->mFinishedAdventure > 1)
+			if (IsFirstTimeAdventureMode() && aLevel < 50)
+			{
+				ShowAwardScreen(AwardType::AWARD_FORLEVEL, true);
+			}
+			else if (aLevel == FINAL_LEVEL && mPlayerInfo->mFinishedAdventure == 1)
+			{
+				if (mPlayerInfo->mFinishedAdventure > 1)
+				{
+					ShowAwardScreen(AwardType::AWARD_FORLEVEL, true);
+				}
+				else
+				{
+					ShowAwardScreen(AwardType::AWARD_CREDITS_ZOMBIENOTE, true);
+				}
+			}
+			else if (aLevel == 9 || aLevel == 19 || aLevel == 29 || aLevel == 39 || aLevel == 49)
 			{
 				ShowAwardScreen(AwardType::AWARD_FORLEVEL, true);
 			}
 			else
 			{
-				ShowAwardScreen(AwardType::AWARD_CREDITS_ZOMBIENOTE, true);
+				PreNewGame(mGameMode, false);
 			}
-		}
-		else if (aLevel == 9 || aLevel == 19 || aLevel == 29 || aLevel == 39 || aLevel == 49)
-		{
-			ShowAwardScreen(AwardType::AWARD_FORLEVEL, true);
 		}
 		else
 		{
-			PreNewGame(mGameMode, false);
+			DoBackToMain();
 		}
-		
 	}
 	else if (IsLastStandEndless(mGameMode))
 	{
@@ -2001,7 +2022,7 @@ void LawnApp::LoadingThreadProc()
 		mBoardCamera = new MemoryImage();
 		mBoardCamera->mWidth = BOARD_WIDTH;
 		mBoardCamera->mHeight = BOARD_HEIGHT;
-		int aNumBits = BOARD_WIDTH * BOARD_HEIGHT;
+		int aNumBits = mBoardCamera->mWidth * mBoardCamera->mHeight;
 		mBoardCamera->mBits = new unsigned long[aNumBits + 1];
 		mBoardCamera->mHasTrans = true;
 		mBoardCamera->mHasAlpha = true;
@@ -2454,7 +2475,7 @@ bool LawnApp::IsWallnutBowlingLevel()
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_WALLNUT_BOWLING || mGameMode == GameMode::GAMEMODE_CHALLENGE_WALLNUT_BOWLING_2)
 		return true;
 
-	return IsAdventureMode() && mPlayerInfo->mLevel == 5;
+	return IsAdventureMode() && mBoard->mLevel == 5;
 }
 
 //0x453870
@@ -2472,13 +2493,16 @@ bool LawnApp::IsWhackAZombieLevel()
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_WHACK_A_ZOMBIE)
 		return true;
 
-	return IsAdventureMode() && mPlayerInfo->mLevel == 15;
+	return IsAdventureMode() && mBoard->mLevel == 15;
 }
 
 //0x4538C0
 bool LawnApp::IsLittleTroubleLevel()
 {
-	return (mBoard && (mGameMode == GameMode::GAMEMODE_CHALLENGE_LITTLE_TROUBLE || (mGameMode == GameMode::GAMEMODE_ADVENTURE && mPlayerInfo->mLevel == 25)));
+	if (mBoard == nullptr)
+		return false;
+
+	return mGameMode == GameMode::GAMEMODE_CHALLENGE_LITTLE_TROUBLE || (mGameMode == GameMode::GAMEMODE_ADVENTURE && mBoard->mLevel == 25);
 }
 
 //0x4538F0
@@ -2490,7 +2514,10 @@ bool LawnApp::IsScaryPotterLevel()
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_VASEBREAKER)
 		return true;
 
-	return IsAdventureMode() && mPlayerInfo->mLevel == 35;
+	if (mBoard == nullptr)
+		return false;
+
+	return IsAdventureMode() && mBoard->mLevel == 35;
 }
 
 //0x453920
@@ -2502,7 +2529,7 @@ bool LawnApp::IsStormyNightLevel()
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_STORMY_NIGHT)
 		return true;
 
-	return IsAdventureMode() && mPlayerInfo->mLevel == 40;
+	return IsAdventureMode() && mBoard->mLevel == 40;
 }
 
 //0x453950
@@ -2514,7 +2541,7 @@ bool LawnApp::IsBungeeBlitzLevel()
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_BUNGEE_BLITZ)
 		return true;
 
-	return IsAdventureMode() && mPlayerInfo->mLevel == 45;
+	return IsAdventureMode() && mBoard->mLevel == 45;
 }
 
 //0x453980
@@ -2524,10 +2551,10 @@ bool LawnApp::IsMiniBossLevel()
 		return false;
 
 	return
-		(IsAdventureMode() && mPlayerInfo->mLevel == 10) ||
-		(IsAdventureMode() && mPlayerInfo->mLevel == 20) ||
-		(IsAdventureMode() && mPlayerInfo->mLevel == 30) ||
-		(IsAdventureMode() && mPlayerInfo->mLevel == 40);
+		(IsAdventureMode() && mBoard->mLevel == 10) ||
+		(IsAdventureMode() && mBoard->mLevel == 20) ||
+		(IsAdventureMode() && mBoard->mLevel == 30) ||
+		(IsAdventureMode() && mBoard->mLevel == 40);
 }
 
 //0x4539D0
@@ -2539,7 +2566,7 @@ bool LawnApp::IsFinalBossLevel()
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_FINAL_BOSS)
 		return true;
 
-	return IsAdventureMode() && mPlayerInfo->mLevel == 50;
+	return IsAdventureMode() && mBoard->mLevel == 50;
 }
 
 //0x453A00
@@ -2563,8 +2590,11 @@ bool LawnApp::IsChallengeWithoutSeedBank()
 
 bool LawnApp::IsNight()
 {
-	if (IsIceDemo() || mPlayerInfo == nullptr)
+	if (IsIceDemo() || mPlayerInfo == nullptr && mBoard == nullptr)
 		return false;
+
+	if (mBoard)
+		return (mBoard->mLevel >= 11 && mBoard->mLevel <= 20) || (mBoard->mLevel >= 31 && mBoard->mLevel <= 40) || mBoard->mLevel == 50;
 
 	return (mPlayerInfo->mLevel >= 11 && mPlayerInfo->mLevel <= 20) || (mPlayerInfo->mLevel >= 31 && mPlayerInfo->mLevel <= 40) || mPlayerInfo->mLevel == 50;
 }
@@ -2642,7 +2672,7 @@ SeedType LawnApp::GetAwardSeedForLevel(int theLevel)
 //0x453AC0
 int LawnApp::GetSeedsAvailable()
 {
-	int aLevel = mPlayerInfo->GetLevel();
+	int aLevel = mBoard && mBoard->mIsReplay && mPlayerLevelRef > 4 ? mPlayerLevelRef : mPlayerInfo->GetLevel();
 	int maxPlants = 49;
 
 	if (HasFinishedAdventure() || aLevel > 50)
@@ -3589,7 +3619,7 @@ void LawnApp::EnforceCursor()
 	switch (mCursorNum)
 	{
 	case CURSOR_POINTER:
-		::SetCursor(LoadCursor(GetModuleHandle(NULL), MAKEINTRESOURCE(IDC_CURSOR1)));
+		::SetCursor(mBigArrowCursor);
 		//::SetCursor(LoadCursor(NULL, IDC_ARROW));
 		return;
 
@@ -3644,7 +3674,7 @@ void LawnApp::EnforceCursor()
 		return;
 
 	default:
-		::SetCursor(LoadCursor(NULL, IDC_ARROW));
+		::SetCursor(mBigArrowCursor);
 		return;
 	}
 }
@@ -3945,7 +3975,7 @@ bool LawnApp::ChallengeUsesMicrophone(GameMode theGameMode)
 
 bool LawnApp::ChallengeHasScores(GameMode theGameMode)
 {
-#ifndef _HAS_SCORESYSTEM
+#ifndef _HAS_SCORE_SYSTEM
 	return false;
 #endif
 	return IsEndlessIZombie(theGameMode) || IsEndlessScaryPotter(theGameMode) || IsSurvivalEndless(theGameMode) || IsLastStandEndless(theGameMode);
@@ -4117,15 +4147,22 @@ bool LawnApp::IsLastStandEndless(GameMode theGameMode)
 	return aLevel >= 0 && aLevel <= 4;
 }
 
-void LawnApp::DrawBoardCamera(Graphics* g, SexyTransform2D theTransform, Color theColor, int theDrawMode, Rect theClipRect, FilterEffect theFilterEffect, bool drawOnlyCamera) 
+void LawnApp::DrawBoardCamera(Graphics* g, SexyTransform2D theTransform, Color theColor, int theDrawMode, Rect theClipRect, FilterEffect theFilterEffect, bool drawOnlyCamera)
 {
 	DDImage* screen = mDDInterface->GetScreenImage();
 
 	LPDIRECTDRAWSURFACE oldDrawSurface = mDDInterface->mDrawSurface;
 	mDDInterface->mDrawSurface = NULL;
+	DDImage* anImage = new DDImage(mDDInterface);
+	anImage->SetSurface(oldDrawSurface);
+	anImage->GetBits();
 
-	screen->CopySurfaceToMemoryImage(mBoardCamera);
+	mBoardCamera->mBits = anImage->mBits;
+	mBoardCamera->mWidth = anImage->mWidth;
+	mBoardCamera->mHeight = anImage->mHeight;
 
+
+	anImage->DeleteDDSurface();
 	mDDInterface->mDrawSurface = oldDrawSurface;
 
 	Image* theImage = mBoardCamera;

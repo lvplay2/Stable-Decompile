@@ -626,6 +626,7 @@ void GameSelector::SyncProfile(bool theShowLoading)
 	mLevel = 1;
 	if (mApp->mPlayerInfo)
 		mLevel = mApp->mPlayerInfo->GetLevel();
+	mApp->mPlayerLevelRef = mLevel;
 	mShowStartButton = true;
 	mMinigamesLocked = true;
 	mPuzzleLocked = true;
@@ -1172,8 +1173,6 @@ void GameSelector::Update()
 #endif
 #ifdef _HAS_LEVELSELECTOR
 		mLevelSelectorWidget->mY = aTransform.mTransY;
-#endif
-#ifdef _HAS_ACHIEVEMENTS
 		mAchievementsWidget->mY = aTransform.mTransY + BOARD_HEIGHT;
 #endif
 		
@@ -1715,6 +1714,12 @@ void GameSelector::ClickedAdventure()
 		mApp->EraseFile(GetSavedGameName(GameMode::GAMEMODE_ADVENTURE, mApp->mPlayerInfo->mId));
 	}
 
+	/*if (mApp->mPlayerInfo->mLevel > 1)
+	{
+		ShowQuickplayScreen();
+		return;
+	}*/
+
 	mApp->mMusic->StopAllMusic();
 	mApp->PlaySample(Sexy::SOUND_LOSEMUSIC);
 	mStartingGame = true;
@@ -1985,11 +1990,15 @@ void GameSelector::ShowAchievementsScreen() {
 void GameSelector::ShowZombatarScreen() {
 	SlideTo(-mApp->mWidth, 0);
 	mWidgetManager->SetFocus(mZombatarWidget);
+#if defined(_HAS_LEVELSELECTOR) && defined(_HAS_ZOMBATAR)
 	mWidgetManager->PutBehind(mLevelSelectorWidget, mZombatarWidget);
+#endif
 	mZombatarWidget->mBackButton->mButtonImage = Sexy::IMAGE_BLANK;
 	mZombatarWidget->mBackButton->mDownImage = Sexy::IMAGE_ZOMBATAR_MAINMENUBACK_HIGHLIGHT;
 	mZombatarWidget->mBackButton->mOverImage = Sexy::IMAGE_ZOMBATAR_MAINMENUBACK_HIGHLIGHT;
+#ifdef _HAS_MORESCREEN
 	mMoreWidget->DisableButtons(true);
+#endif
 	DisableButtons(true);
 }
 #endif
@@ -2006,20 +2015,16 @@ void GameSelector::ShowQuickplayScreen() {
 	SlideTo(-mApp->mWidth, 0);
 #ifdef _HAS_LEVELSELECTOR
 	mWidgetManager->SetFocus(mLevelSelectorWidget);
-#endif
-#ifdef _HAS_ZOMBATAR
 	mWidgetManager->PutBehind(mZombatarWidget, mLevelSelectorWidget);
 #endif
 
+#ifdef _HAS_LEVELSELECTOR
 	//int currentStage = min((int)(mApp->mPlayerInfo->mLevel / 10.0f), 4) + 1;
 	//currentStage = 1;
 	//mLevelSelectorWidget->theCurrentId = currentStage;
-#ifdef _HAS_LEVELSELECTOR
 	mLevelSelectorWidget->SelectStage(1, false);
 	mLevelSelectorWidget->mHasFinishedSliding = false;
 	mLevelSelectorWidget->mIsSlidingOut = false;
-#endif
-#ifdef _HAS_MORESCREEN
 	mMoreWidget->DisableButtons(true);
 #endif
 	DisableButtons(true);

@@ -11,6 +11,7 @@
 #include "Debug.h"
 #include "DirectXErrorString.h"
 #include "MemoryImage.h"
+#include "../LawnApp.h"
 
 using namespace Sexy;
 
@@ -414,27 +415,26 @@ int DDInterface::Init(HWND theWindow, bool IsWindowed)
 			mHeight = mHeights[heightIndex];
 			mAspect.Set(mWidth, mHeight);
 
-			if (mHeight * (mDesktopWidth / (float)mDesktopHeight) >= mHeight * (mWidth / (float)mHeight))
-			{
-				mDisplayWidth = mHeight * (mDesktopWidth / (float)mDesktopHeight);
-				mDisplayHeight = mHeight;
-			}
-			else if (mWidth * (mDesktopHeight / (float)mDesktopWidth) >= mWidth * (mHeight / (float)mWidth))
-			{
-				mDisplayWidth = mWidth;
-				mDisplayHeight = mWidth * (mDesktopHeight / (float)mDesktopWidth);
-			}
-			mDisplayAspect = mAspect;
+			mDisplayWidth = mDesktopWidth;
+			mDisplayHeight = mDesktopHeight;
+			mDisplayAspect = mDesktopAspect;
+
+			float scaleX = (float)mDesktopWidth / (float)mWidth;
+			float scaleY = (float)mDesktopHeight / (float)mHeight;
+			float scale = min(scaleX, scaleY);
+
+			int scaledWidth = (int)(mWidth * scale + 0.5f);
+			int scaledHeight = (int)(mHeight * scale + 0.5f);
+
+			mPresentationRect.mWidth = scaledWidth;
+			mPresentationRect.mHeight = scaledHeight;
+			mPresentationRect.mX = (mDesktopWidth - scaledWidth) / 2;
+			mPresentationRect.mY = (mDesktopHeight - scaledHeight) / 2;
 
 			mWideScreenExtraWidth = mWidth - gSexyAppBase->mWidth;
 			mWideScreenOffsetX = mWideScreenExtraWidth / 2.0f;
 			mWideScreenExtraHeight = mHeight - gSexyAppBase->mHeight;
 			mWideScreenOffsetY = mWideScreenExtraHeight / 2.0f;
-
-			mPresentationRect.mWidth = mWidth;
-			mPresentationRect.mHeight = mHeight;
-			mPresentationRect.mX = (mDisplayWidth - mWidth) / 2;
-			mPresentationRect.mY = (mDisplayHeight - mHeight) / 2;
 		}
 		else
 		{
@@ -449,6 +449,8 @@ int DDInterface::Init(HWND theWindow, bool IsWindowed)
 			mDisplayHeight = mDesktopHeight;
 			mDisplayAspect = mDesktopAspect;
 		}
+
+		gLawnApp->gBoardBounds = Rect{ 0, 0, mWidth, mHeight };
 
 		OutputDebug(_S("Display is           %4lu x %4lu [%2d:%2d]\n"), mDisplayWidth, mDisplayHeight, mDisplayAspect.mNumerator, mDisplayAspect.mDenominator);
 

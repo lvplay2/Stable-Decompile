@@ -146,11 +146,13 @@ public:
 	MemoryImage*					mBoardCamera;
 	//lua_State*						L;
 
-	static							Rect gBoardBounds;
+	Rect							gBoardBounds;
 	std::vector<SexyString>			mDebugTexts;
 	MemoryImage*					mDirtyBushes[6];
 
 	bool							mRIPMode;
+
+	int								mPlayerLevelRef;
 
 public:
 	LawnApp();
